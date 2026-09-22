@@ -23,6 +23,7 @@ class ValidationResult(BaseModel):
     """
     is_valid: bool
     error_details: Optional[str] = None
+    pydantic_errors: Optional[list[dict[str, Any]]] = None
 
 
 # ── Single attempt record (for the execution log) ──────────────────
@@ -43,20 +44,22 @@ class AttemptRecord(BaseModel):
 class ProcessResponse(BaseModel):
     """
     Full response sent back to the React frontend.
-    Contains the final status, the parsed output (if successful),
-    and the complete execution log for the timeline visualizer.
     """
     status: str = Field(
         ...,
-        description="'Success', 'Requires Human Review', or 'Failed after N retries'",
+        description="'Success', 'needs_clarification', or 'Failed after N retries'",
     )
     final_output: Optional[dict[str, Any]] = Field(
         default=None,
-        description="The validated, structured invoice data (if extraction succeeded).",
+        description="The validated, structured data (if extraction succeeded).",
     )
-    fields_needing_review: list[str] = Field(
+    missing_fields: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="List of field names that are missing or invalid and need human input.",
+        description="List of dicts containing 'field' and 'reason' for missing/invalid fields.",
+    )
+    partial_data: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="The raw JSON the LLM managed to generate before failing.",
     )
     attempts: list[AttemptRecord] = Field(
         default_factory=list,
@@ -64,3 +67,15 @@ class ProcessResponse(BaseModel):
     )
     total_attempts: int = 0
     max_retries: int = 5
+
+
+class ResolveRequest(BaseModel):
+    use_case: str
+    partial_data: dict[str, Any]
+    user_inputs: dict[str, Any]
+
+
+class ResolveResponse(BaseModel):
+    status: str
+    final_data: dict[str, Any]
+    errors: Optional[list[dict[str, Any]]] = None

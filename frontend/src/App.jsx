@@ -136,6 +136,48 @@ export default function App() {
     }} />
   }
 
+  const handleResolve = async (userInputs) => {
+    try {
+      setIsProcessing(true);
+      const response = await fetch(`${API_URL}/resolve-clarification`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          use_case: useCase,
+          partial_data: result.partial_data,
+          user_inputs: userInputs 
+        }),
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          handleLogout();
+          throw new Error('Session expired, please log in again');
+        }
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error: ${response.status}`);
+      }
+
+      const resolution = await response.json();
+      if (resolution.status === "resolved") {
+        setResult(prev => ({
+          ...prev,
+          status: "resolved",
+          final_output: resolution.final_data
+        }));
+      } else {
+        setError("Still missing or invalid fields. Check your inputs.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to resolve clarification");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header onLogout={handleLogout} />
@@ -150,7 +192,7 @@ export default function App() {
                 max={result?.max_retries || 3}
                 isProcessing={isProcessing}
               />
-              {result && <StatusBanner status={result.status} />}
+              <StatusBanner status={result?.status} />
             </div>
           </div>
         )}
@@ -172,12 +214,12 @@ export default function App() {
             schema={schema}
           />
 
-          {/* RIGHT: Execution Timeline */}
           <ExecutionTimeline
             result={result}
             isProcessing={isProcessing}
             error={error}
             activeStep={activeStep}
+            onResolve={handleResolve}
           />
         </div>
       </main>

@@ -149,55 +149,72 @@ async def process_data(request: ProcessRequest, user: str = Depends(get_current_
         else:
             previous_error = validation.error_details
 
-    SCHEMA_FIELDS = {}
-    for f in use_case_config["fields"]:
-        if f["type"] == "list[str]":
-            SCHEMA_FIELDS[f["name"]] = []
-        elif f.get("default") is not None:
-            SCHEMA_FIELDS[f["name"]] = f["default"]
-        else:
-            SCHEMA_FIELDS[f["name"]] = None
-        if use_case_config.get("source_quotes"):
-            SCHEMA_FIELDS[f"{f['name']}_source_quote"] = ""
-
-    fields_needing_review: list[str] = []
+    missing_fields = []
+    partial_data = None
 
     if status != "Success":
-        best_partial: dict = {}
-        for att in reversed(attempts):
-            if att.agent_output:
-                try:
-                    gate_result = validate_llm_output(att.agent_output)
-                    if gate_result.get("parsed_data"):
-                        best_partial = gate_result["parsed_data"]
-                        break
-                    elif gate_result.get("partial_data"):
-                        best_partial = gate_result["partial_data"]
-                        break
-                    else:
-                        parsed = json.loads(att.agent_output)
-                        if isinstance(parsed, dict):
-                            best_partial = parsed
-                            break
-                except Exception:
-                    continue
-
-        merged_output: dict = {}
-        for field, default_val in SCHEMA_FIELDS.items():
-            if field in best_partial and best_partial[field] not in (None, "", []):
-                merged_output[field] = best_partial[field]
-            else:
-                merged_output[field] = default_val
-                fields_needing_review.append(field)
-
-        final_output = merged_output
-        status = "Requires Human Review"
+        # Get the last validation result to extract pydantic errors
+        last_attempt = attempts[-1]
+        if last_attempt and last_attempt.validation and last_attempt.validation.pydantic_errors:
+            for error in last_attempt.validation.pydantic_errors:
+                loc = error.get("loc", [])
+                if loc:
+                    field_name = str(loc[0])
+                    missing_fields.append({
+                        "field": field_name,
+                        "reason": error.get("msg", "Invalid field")
+                    })
+        
+        # Try to extract the best partial data
+        if last_attempt and last_attempt.agent_output:
+            try:
+                gate_result = validate_llm_output(last_attempt.agent_output, model_class=dynamic_model)
+                partial_data = gate_result.get("partial_data") or json.loads(last_attempt.agent_output)
+            except Exception:
+                partial_data = {}
+        
+        if not partial_data:
+            partial_data = {}
+            
+        status = "needs_clarification"
 
     return ProcessResponse(
         status=status,
         final_output=final_output,
-        fields_needing_review=fields_needing_review,
+        missing_fields=missing_fields,
+        partial_data=partial_data,
         attempts=attempts,
         total_attempts=len(attempts),
         max_retries=MAX_RETRIES,
     )
+
+from models import ResolveRequest, ResolveResponse
+
+@app.post("/resolve-clarification", response_model=ResolveResponse)
+async def resolve_clarification(request: ResolveRequest, user: str = Depends(get_current_user)):
+    try:
+        use_case_config = get_use_case(request.use_case)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    dynamic_model = build_dynamic_model(use_case_config)
+    
+    # Merge partial data with user inputs
+    merged_data = {**request.partial_data, **request.user_inputs}
+    
+    try:
+        # Final validation
+        validated = dynamic_model(**merged_data)
+        return ResolveResponse(
+            status="resolved",
+            final_data=validated.model_dump(mode="json")
+        )
+    except Exception as exc:
+        # If it still fails, return the errors
+        if hasattr(exc, "errors"):
+            return ResolveResponse(
+                status="error",
+                final_data=merged_data,
+                errors=exc.errors()
+            )
+        raise HTTPException(status_code=400, detail=str(exc))

@@ -1,7 +1,7 @@
 import AttemptCard from './AttemptCard'
 import FinalOutput from './FinalOutput'
 
-export default function ExecutionTimeline({ result, isProcessing, error, activeStep }) {
+export default function ExecutionTimeline({ result, isProcessing, error, activeStep, onResolve }) {
   const isEmpty = !result && !isProcessing && !error
 
   return (
@@ -99,20 +99,36 @@ export default function ExecutionTimeline({ result, isProcessing, error, activeS
               </div>
             </div>
 
-            {/* Final output — show for both Success and Requires Human Review */}
-            {(result.status === 'Success' || result.status === 'Requires Human Review') && result.final_output && (
+            {/* Final output — show for Success, needs_clarification, and resolved */}
+            {(result.status === 'Success' || result.status === 'needs_clarification' || result.status === 'resolved') && (result.final_output || result.partial_data) && (
               <div
                 className={`mt-6 transition-all duration-500 ${
                   activeStep > result.attempts.length - 1 ? 'opacity-100' : 'opacity-0 translate-y-4'
                 }`}
                 style={{ transitionDelay: `${result.attempts.length * 150 + 200}ms` }}
               >
+                {result.status === 'resolved' && (
+                  <div className="mb-4 relative">
+                    <div className="absolute left-[19px] top-[-24px] bottom-full w-px bg-green-500/50" />
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 rounded-full bg-[#111118] border-2 border-green-500/30 flex items-center justify-center shrink-0 z-10">
+                        <span className="text-green-400">👤</span>
+                      </div>
+                      <div className="flex-1 bg-[#1a1a24] border border-[#2a2a3a] rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-semibold text-green-400 flex items-center gap-2">
+                            User Provided Missing Data → Evidence Gate Passed
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <FinalOutput
-                  data={result.final_output}
-                  fieldsNeedingReview={result.fields_needing_review || []}
-                  onHumanSubmit={(correctedData) => {
-                    console.log('Human-reviewed data submitted:', correctedData)
-                  }}
+                  data={result.final_output || result.partial_data}
+                  status={result.status}
+                  missingFields={result.missing_fields || []}
+                  onResolve={onResolve}
                 />
               </div>
             )}

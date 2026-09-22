@@ -107,6 +107,7 @@ def validate_llm_output(json_string: str, model_class=None) -> dict[str, Any]:
             "error_details": friendly_msg,
             "parsed_data": None,
             "partial_data": raw,
+            "pydantic_errors": exc.errors()
         }
 
     # -------------------------------------------------------------- #
