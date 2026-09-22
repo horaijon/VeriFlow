@@ -13,6 +13,7 @@ class ProcessRequest(BaseModel):
         json_schema_extra={"example": "Client: John Doe. Amount: One hundred dollars. Date: Tomorrow."},
     )
     use_case: str = Field(default="invoice", description="The use case template ID")
+    custom_schema: list[dict[str, Any]] | None = None
 
 
 # ── Evidence Gate contract ──────────────────────────────────────────
@@ -73,6 +74,7 @@ class ResolveRequest(BaseModel):
     use_case: str
     partial_data: dict[str, Any]
     user_inputs: dict[str, Any]
+    custom_schema: list[dict[str, Any]] | None = None
 
 
 class ResolveResponse(BaseModel):

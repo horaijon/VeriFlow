@@ -98,10 +98,19 @@ async def get_schema(use_case_id: str, user: str = Depends(get_current_user)):
 @app.post("/process-data", response_model=ProcessResponse)
 async def process_data(request: ProcessRequest, user: str = Depends(get_current_user)):
     raw_text = request.raw_text
-    try:
-        use_case_config = get_use_case(request.use_case)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if request.custom_schema:
+        use_case_config = {
+            "id": "custom",
+            "name": "Custom Schema",
+            "description": "User defined custom schema",
+            "fields": request.custom_schema,
+            "source_quotes": True
+        }
+    else:
+        try:
+            use_case_config = get_use_case(request.use_case)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
     dynamic_model = build_dynamic_model(use_case_config)
     schema_prompt = build_schema_prompt(use_case_config)
@@ -203,10 +212,19 @@ from models import ResolveRequest, ResolveResponse
 
 @app.post("/resolve-clarification", response_model=ResolveResponse)
 async def resolve_clarification(request: ResolveRequest, user: str = Depends(get_current_user)):
-    try:
-        use_case_config = get_use_case(request.use_case)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if request.custom_schema:
+        use_case_config = {
+            "id": "custom",
+            "name": "Custom Schema",
+            "description": "User defined custom schema",
+            "fields": request.custom_schema,
+            "source_quotes": True
+        }
+    else:
+        try:
+            use_case_config = get_use_case(request.use_case)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
     dynamic_model = build_dynamic_model(use_case_config)
     

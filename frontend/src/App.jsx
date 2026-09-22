@@ -78,6 +78,11 @@ export default function App() {
     }
   }, [useCase, token])
 
+  const [isCustomSchema, setIsCustomSchema] = useState(false)
+  const [customSchema, setCustomSchema] = useState([
+    { name: 'example_field', type: 'str', description: 'Description of field', required: true }
+  ])
+
   async function handleSubmit() {
     if (!inputText.trim() || isProcessing) return
 
@@ -87,13 +92,21 @@ export default function App() {
     setActiveStep(0)
 
     try {
+      const payload = {
+        raw_text: inputText,
+        use_case: useCase,
+      }
+      if (isCustomSchema) {
+        payload.custom_schema = customSchema
+      }
+
       const response = await fetch(`${API_URL}/process-data`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ raw_text: inputText, use_case: useCase }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -139,17 +152,23 @@ export default function App() {
   const handleResolve = async (userInputs) => {
     try {
       setIsProcessing(true);
+      
+      const payload = { 
+        use_case: useCase,
+        partial_data: result.partial_data,
+        user_inputs: userInputs 
+      }
+      if (isCustomSchema) {
+        payload.custom_schema = customSchema
+      }
+
       const response = await fetch(`${API_URL}/resolve-clarification`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          use_case: useCase,
-          partial_data: result.partial_data,
-          user_inputs: userInputs 
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -192,7 +211,7 @@ export default function App() {
                 max={result?.max_retries || 3}
                 isProcessing={isProcessing}
               />
-              <StatusBanner status={result?.status} />
+              <StatusBanner status={result?.status} isProcessing={isProcessing} />
             </div>
           </div>
         )}
@@ -212,6 +231,10 @@ export default function App() {
             setUseCase={setUseCase}
             availableUseCases={availableUseCases}
             schema={schema}
+            isCustomSchema={isCustomSchema}
+            setIsCustomSchema={setIsCustomSchema}
+            customSchema={customSchema}
+            setCustomSchema={setCustomSchema}
           />
 
           <ExecutionTimeline
