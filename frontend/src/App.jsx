@@ -5,6 +5,7 @@ import ExecutionTimeline from './components/ExecutionTimeline'
 import StatusBanner from './components/StatusBanner'
 import RetryCounter from './components/RetryCounter'
 import Login from './components/Login'
+import BackgroundPixelStars from './components/ui/background-pixel-stars'
 
 const API_URL = 'http://localhost:8000'
 
@@ -143,10 +144,15 @@ export default function App() {
   const demoInputs = USE_CASE_DEMOS[useCase] || []
 
   if (!token) {
-    return <Login onLogin={(newToken) => {
-      localStorage.setItem('token', newToken)
-      setToken(newToken)
-    }} />
+    return (
+      <>
+        <BackgroundPixelStars />
+        <Login onLogin={(newToken) => {
+          localStorage.setItem('token', newToken)
+          setToken(newToken)
+        }} />
+      </>
+    )
   }
 
   const handleResolve = async (userInputs) => {
@@ -199,62 +205,65 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header onLogout={handleLogout} />
+    <>
+      <BackgroundPixelStars />
+      <div className="min-h-screen flex flex-col relative z-10">
+        <Header onLogout={handleLogout} />
 
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        {/* Retry Counter + Status — top bar */}
-        {(result || isProcessing) && (
-          <div className="mb-6 animate-fade-in-up">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <RetryCounter
-                current={result?.total_attempts || (isProcessing ? 1 : 0)}
-                max={result?.max_retries || 3}
-                isProcessing={isProcessing}
-                attempts={result?.attempts || []}
-              />
-              <StatusBanner status={result?.status} isProcessing={isProcessing} />
+        <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+          {/* Retry Counter + Status — top bar */}
+          {(result || isProcessing) && (
+            <div className="mb-6 animate-fade-in-up">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <RetryCounter
+                  current={result?.total_attempts || (isProcessing ? 1 : 0)}
+                  max={result?.max_retries || 3}
+                  isProcessing={isProcessing}
+                  attempts={result?.attempts || []}
+                />
+                <StatusBanner status={result?.status} isProcessing={isProcessing} />
+              </div>
             </div>
+          )}
+
+          {/* Main 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+            {/* LEFT: Input Panel */}
+            <InputPanel
+              inputText={inputText}
+              setInputText={setInputText}
+              demoInputs={demoInputs}
+              onSubmit={handleSubmit}
+              onReset={handleReset}
+              isProcessing={isProcessing}
+              hasResult={!!result}
+              useCase={useCase}
+              setUseCase={setUseCase}
+              availableUseCases={availableUseCases}
+              schema={schema}
+              isCustomSchema={isCustomSchema}
+              setIsCustomSchema={setIsCustomSchema}
+              customSchema={customSchema}
+              setCustomSchema={setCustomSchema}
+            />
+
+            <ExecutionTimeline
+              result={result}
+              isProcessing={isProcessing}
+              error={error}
+              activeStep={activeStep}
+              onResolve={handleResolve}
+            />
           </div>
-        )}
+        </main>
 
-        {/* Main 2-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
-          {/* LEFT: Input Panel */}
-          <InputPanel
-            inputText={inputText}
-            setInputText={setInputText}
-            demoInputs={demoInputs}
-            onSubmit={handleSubmit}
-            onReset={handleReset}
-            isProcessing={isProcessing}
-            hasResult={!!result}
-            useCase={useCase}
-            setUseCase={setUseCase}
-            availableUseCases={availableUseCases}
-            schema={schema}
-            isCustomSchema={isCustomSchema}
-            setIsCustomSchema={setIsCustomSchema}
-            customSchema={customSchema}
-            setCustomSchema={setCustomSchema}
-          />
-
-          <ExecutionTimeline
-            result={result}
-            isProcessing={isProcessing}
-            error={error}
-            activeStep={activeStep}
-            onResolve={handleResolve}
-          />
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-800 py-4 text-center">
-        <p className="text-xs text-zinc-500 font-medium">
-          VeriFlow &middot; Self-Healing Agentic Pipeline &middot; Evidence Gate v1.0
-        </p>
-      </footer>
-    </div>
+        {/* Footer */}
+        <footer className="border-t border-zinc-800 py-4 text-center">
+          <p className="text-xs text-zinc-500 font-medium">
+            VeriFlow &middot; Self-Healing Agentic Pipeline &middot; Evidence Gate v1.0
+          </p>
+        </footer>
+      </div>
+    </>
   )
 }
