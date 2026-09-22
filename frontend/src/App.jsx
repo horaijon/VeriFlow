@@ -211,6 +211,7 @@ export default function App() {
                 current={result?.total_attempts || (isProcessing ? 1 : 0)}
                 max={result?.max_retries || 3}
                 isProcessing={isProcessing}
+                attempts={result?.attempts || []}
               />
               <StatusBanner status={result?.status} isProcessing={isProcessing} />
             </div>
