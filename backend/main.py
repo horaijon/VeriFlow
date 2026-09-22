@@ -150,31 +150,42 @@ async def process_data(request: ProcessRequest, user: str = Depends(get_current_
             previous_error = validation.error_details
 
     missing_fields = []
-    partial_data = None
+    partial_data = {}
 
     if status != "Success":
-        # Get the last validation result to extract pydantic errors
-        last_attempt = attempts[-1]
-        if last_attempt and last_attempt.validation and last_attempt.validation.pydantic_errors:
-            for error in last_attempt.validation.pydantic_errors:
-                loc = error.get("loc", [])
-                if loc:
-                    field_name = str(loc[0])
-                    missing_fields.append({
-                        "field": field_name,
-                        "reason": error.get("msg", "Invalid field")
-                    })
+        # Scan backwards to find the last valid Pydantic error and best partial data
+        for att in reversed(attempts):
+            if att.validation and att.validation.pydantic_errors and not missing_fields:
+                for error in att.validation.pydantic_errors:
+                    loc = error.get("loc", [])
+                    if loc:
+                        missing_fields.append({
+                            "field": str(loc[0]),
+                            "reason": error.get("msg", "Invalid field")
+                        })
+            
+            if att.agent_output and not partial_data:
+                try:
+                    gate_result = validate_llm_output(att.agent_output, model_class=dynamic_model)
+                    partial_data = gate_result.get("partial_data") or json.loads(att.agent_output)
+                except Exception:
+                    pass
         
-        # Try to extract the best partial data
-        if last_attempt and last_attempt.agent_output:
-            try:
-                gate_result = validate_llm_output(last_attempt.agent_output, model_class=dynamic_model)
-                partial_data = gate_result.get("partial_data") or json.loads(last_attempt.agent_output)
-            except Exception:
-                partial_data = {}
-        
+        # If we STILL have no partial data (e.g. all attempts were 503s), 
+        # build a skeleton from the schema so the UI has fields to render!
         if not partial_data:
-            partial_data = {}
+            for f in use_case_config["fields"]:
+                partial_data[f["name"]] = None
+                if use_case_config.get("source_quotes"):
+                    partial_data[f"{f['name']}_source_quote"] = ""
+        
+        # If we STILL have no missing_fields, mark all base fields as missing
+        if not missing_fields:
+            for f in use_case_config["fields"]:
+                missing_fields.append({
+                    "field": f["name"],
+                    "reason": "Agent failed to generate data (API Error)"
+                })
             
         status = "needs_clarification"
 

@@ -63,6 +63,7 @@ JSON object with EXACTLY these keys and types:
 
 Rules:
 - For every data field, you MUST also provide a "<field_name>_source_quote" field containing the EXACT substring from the source text that proves your extraction. If the information is inferred (not directly quoted), write "[inferred]".
+- If a value is genuinely missing from the text, you MUST set its value to null. DO NOT guess, and DO NOT use placeholder strings like "Unknown", "N/A", or "".
 - Output ONLY the JSON object. No markdown, no backticks, no explanation.
 
 --- BEGIN MESSY TEXT ---
@@ -83,6 +84,9 @@ Fix ONLY the fields that caused the error. Return the corrected JSON object \
 with EXACTLY these keys and types:
 
 {schema_json}
+
+Rules:
+- If a value is genuinely missing from the text, you MUST set its value to null. DO NOT guess, and DO NOT use placeholder strings like "Unknown", "N/A", or "".
 
 Output ONLY the raw JSON object. No markdown, no backticks, no explanation.
 """
