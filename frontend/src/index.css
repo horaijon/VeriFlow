@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
-/* ── Custom theme tokens ─────────────────────────────────────────── */
+/* ── Custom theme tokens (Sleek Dark Dashboard) ──────────────────── */
 :root {
-  --bg-deep:    #0a0a0f;
-  --bg-surface: #111118;
-  --bg-card:    #16161f;
-  --bg-hover:   #1c1c28;
-  --border:     #2a2a3a;
-  --border-dim: #1e1e2e;
-  --text-primary:   #e4e4ef;
-  --text-secondary: #8888a0;
-  --text-dim:       #555568;
-  --accent-blue:    #3b82f6;
-  --accent-green:   #22c55e;
-  --accent-red:     #ef4444;
-  --accent-amber:   #f59e0b;
-  --accent-cyan:    #06b6d4;
-  --glow-green:     rgba(34, 197, 94, 0.15);
+  --bg-deep:    #09090b; /* zinc-950 */
+  --bg-surface: #09090b;
+  --bg-card:    #18181b; /* zinc-900 */
+  --bg-hover:   #27272a; /* zinc-800 */
+  --border:     #27272a; /* zinc-800 */
+  --border-dim: #18181b; /* zinc-900 */
+  --text-primary:   #fafafa; /* zinc-50 */
+  --text-secondary: #a1a1aa; /* zinc-400 */
+  --text-dim:       #71717a; /* zinc-500 */
+  --accent-blue:    #3b82f6; /* blue-500 */
+  --accent-green:   #10b981; /* emerald-500 */
+  --accent-red:     #ef4444; /* red-500 */
+  --accent-amber:   #f59e0b; /* amber-500 */
+  --accent-cyan:    #06b6d4; /* cyan-500 */
+  --glow-green:     rgba(16, 185, 129, 0.15);
   --glow-red:       rgba(239, 68, 68, 0.15);
   --glow-blue:      rgba(59, 130, 246, 0.10);
 }
@@ -25,6 +25,7 @@
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg-deep);
+  color: var(--text-primary);
   min-height: 100vh;
 }
 
@@ -41,11 +42,11 @@ code, pre, .font-mono {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2a3a;
+  background: var(--border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a4a;
+  background: var(--text-dim);
 }
 
 /* ── Animations ──────────────────────────────────────────────────── */

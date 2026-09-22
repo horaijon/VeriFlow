@@ -225,8 +225,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#1e1e2e] py-4 text-center">
-        <p className="text-xs text-[#555568] font-mono">
+      <footer className="border-t border-zinc-800 py-4 text-center">
+        <p className="text-xs text-zinc-500 font-medium">
           VERIFLOW &middot; Self-Healing Agentic Pipeline &middot; Evidence Gate v1.0
         </p>
       </footer>
