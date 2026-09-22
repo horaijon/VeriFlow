@@ -10,8 +10,8 @@ export default function Header({ onLogout }) {
             </svg>
           </div>
           <div>
-            <h1 className="text-zinc-50 font-bold text-sm tracking-widest uppercase">
-              VERIFLOW
+            <h1 className="text-zinc-50 font-bold text-sm tracking-widest">
+              VeriFlow
             </h1>
             <p className="text-[10px] text-zinc-500 font-medium tracking-widest mt-0.5 uppercase">
               SELF-HEALING DATA EXTRACTION
