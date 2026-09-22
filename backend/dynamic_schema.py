@@ -36,7 +36,7 @@ def build_dynamic_model(use_case: dict):
         if use_case.get("source_quotes"):
             quote_name = f"{field_def['name']}_source_quote"
             field_definitions[quote_name] = (
-                str,
+                str | None,
                 Field(default="", description=f"Exact quote from source text proving '{field_def['name']}'")
             )
     

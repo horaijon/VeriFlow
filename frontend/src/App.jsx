@@ -188,7 +188,8 @@ export default function App() {
           final_output: resolution.final_data
         }));
       } else {
-        setError("Still missing or invalid fields. Check your inputs.");
+        const msgs = resolution.errors ? resolution.errors.map(e => `${e.loc[0]}: ${e.msg}`).join(' | ') : "Invalid fields";
+        setError(`Still missing or invalid fields: ${msgs}`);
       }
     } catch (err) {
       setError(err.message || "Failed to resolve clarification");

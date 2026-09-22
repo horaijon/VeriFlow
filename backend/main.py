@@ -228,8 +228,12 @@ async def resolve_clarification(request: ResolveRequest, user: str = Depends(get
         
     dynamic_model = build_dynamic_model(use_case_config)
     
-    # Merge partial data with user inputs
-    merged_data = {**request.partial_data, **request.user_inputs}
+    # Strip any hallucinated extra fields so they don't break extra='forbid'
+    valid_keys = set(dynamic_model.model_fields.keys())
+    clean_partial = {k: v for k, v in request.partial_data.items() if k in valid_keys}
+    
+    # Merge cleaned partial data with user inputs
+    merged_data = {**clean_partial, **request.user_inputs}
     
     try:
         # Final validation
