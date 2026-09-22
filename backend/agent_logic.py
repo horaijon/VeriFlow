@@ -15,6 +15,7 @@ Integration contract:
 import os
 import json
 import re
+from datetime import datetime
 from dotenv import load_dotenv
 from google import genai
 
@@ -66,6 +67,9 @@ Rules:
 - If a value is genuinely missing from the text, you MUST set its value to null. DO NOT guess, and DO NOT use placeholder strings like "Unknown", "N/A", or "".
 - Output ONLY the JSON object. No markdown, no backticks, no explanation.
 
+IMPORTANT CONTEXT:
+The current date is {current_date}. Use this context to resolve any relative dates (e.g. "Tomorrow", "Next week", "Yesterday") into exact YYYY-MM-DD dates in the output JSON.
+
 --- BEGIN MESSY TEXT ---
 {raw_text}
 --- END MESSY TEXT ---
@@ -87,6 +91,9 @@ with EXACTLY these keys and types:
 
 Rules:
 - If a value is genuinely missing from the text, you MUST set its value to null. DO NOT guess, and DO NOT use placeholder strings like "Unknown", "N/A", or "".
+
+IMPORTANT CONTEXT:
+The current date is {current_date}. Use this context to resolve any relative dates (e.g. "Tomorrow", "Next week", "Yesterday") into exact YYYY-MM-DD dates in the output JSON.
 
 Output ONLY the raw JSON object. No markdown, no backticks, no explanation.
 """
@@ -130,12 +137,22 @@ def call_gemini(raw_text: str, attempt_number: int, previous_error: str | None, 
   "line_items": ["<string>"]
 }'''
     schema_json = schema_description if schema_description else default_schema
+    current_date = datetime.now().strftime("%Y-%m-%d")
 
     # Build the prompt depending on whether this is a first attempt or a retry
     if attempt_number == 1 or previous_error is None:
-        user_prompt = EXTRACTION_PROMPT.format(raw_text=raw_text, schema_json=schema_json)
+        user_prompt = EXTRACTION_PROMPT.format(
+            raw_text=raw_text, 
+            schema_json=schema_json, 
+            current_date=current_date
+        )
     else:
-        user_prompt = RETRY_PROMPT.format(error=previous_error, raw_text=raw_text, schema_json=schema_json)
+        user_prompt = RETRY_PROMPT.format(
+            error=previous_error, 
+            raw_text=raw_text, 
+            schema_json=schema_json, 
+            current_date=current_date
+        )
 
     # Call Gemini
     response = _get_client().models.generate_content(
