@@ -5,7 +5,7 @@ import ExecutionTimeline from './components/ExecutionTimeline'
 import StatusBanner from './components/StatusBanner'
 import RetryCounter from './components/RetryCounter'
 import Login from './components/Login'
-import AuroraBackground from './components/ui/aurora-background'
+import FluidFieldBackground from './components/ui/fluid-field'
 
 const API_URL = 'http://localhost:8000'
 
@@ -146,7 +146,7 @@ export default function App() {
   if (!token) {
     return (
       <>
-        <AuroraBackground />
+        <FluidFieldBackground className="fixed inset-0 z-[-1]" />
         <Login onLogin={(newToken) => {
           localStorage.setItem('token', newToken)
           setToken(newToken)
@@ -206,7 +206,7 @@ export default function App() {
 
   return (
     <>
-      <AuroraBackground />
+      <FluidFieldBackground className="fixed inset-0 z-[-1]" />
       <div className="min-h-screen flex flex-col relative z-10">
         <Header onLogout={handleLogout} />
 
