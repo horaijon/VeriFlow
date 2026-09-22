@@ -21,12 +21,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from .schemas import Invoice
+from schemas import Invoice
 
 
-def validate_llm_output(json_string: str) -> dict[str, Any]:
+def validate_llm_output(json_string: str, model_class=None) -> dict[str, Any]:
     """
-    Validate a raw JSON string against the Invoice Pydantic schema.
+    Validate a raw JSON string against the Invoice Pydantic schema or a dynamic model.
 
     Parameters
     ----------
@@ -85,8 +85,9 @@ def validate_llm_output(json_string: str) -> dict[str, Any]:
     # -------------------------------------------------------------- #
     # Step 3 – Validate against the strict Pydantic Invoice model.
     # -------------------------------------------------------------- #
+    target_model = model_class if model_class else Invoice
     try:
-        invoice = Invoice(**raw)
+        invoice = target_model(**raw)
     except ValidationError as exc:
         # Build a concise, actionable error message the LLM can act on.
         error_lines: list[str] = []
@@ -105,6 +106,7 @@ def validate_llm_output(json_string: str) -> dict[str, Any]:
             "is_valid": False,
             "error_details": friendly_msg,
             "parsed_data": None,
+            "partial_data": raw,
         }
 
     # -------------------------------------------------------------- #

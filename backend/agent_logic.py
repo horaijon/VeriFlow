@@ -59,19 +59,10 @@ EXTRACTION_PROMPT = """\
 Extract the following fields from the messy text below and return them as a \
 JSON object with EXACTLY these keys and types:
 
-{{
-  "customer_name": "<string — the customer or client name>",
-  "invoice_amount": <float — numeric dollar amount, no currency symbols>,
-  "date": "<string — date in YYYY-MM-DD format>"
-}}
+{schema_json}
 
 Rules:
-- "customer_name" must be a non-empty string.
-- "invoice_amount" must be a JSON number (float), NOT a string. Convert words \
-like "one hundred" to 100.0.
-- "date" must be a string in YYYY-MM-DD format. Convert relative dates like \
-"tomorrow" or "next Monday" to a concrete date (use 2025-01-15 as today's date \
-if you need a reference point).
+- For every data field, you MUST also provide a "<field_name>_source_quote" field containing the EXACT substring from the source text that proves your extraction. If the information is inferred (not directly quoted), write "[inferred]".
 - Output ONLY the JSON object. No markdown, no backticks, no explanation.
 
 --- BEGIN MESSY TEXT ---
@@ -91,11 +82,7 @@ ORIGINAL MESSY TEXT:
 Fix ONLY the fields that caused the error. Return the corrected JSON object \
 with EXACTLY these keys and types:
 
-{{
-  "customer_name": "<string>",
-  "invoice_amount": <float>,
-  "date": "<YYYY-MM-DD>"
-}}
+{schema_json}
 
 Output ONLY the raw JSON object. No markdown, no backticks, no explanation.
 """
@@ -105,7 +92,20 @@ Output ONLY the raw JSON object. No markdown, no backticks, no explanation.
 # Core function — this is what Person 1's backend calls
 # ---------------------------------------------------------------------------
 
-def call_gemini(raw_text: str, attempt_number: int, previous_error: str | None) -> str:
+def build_schema_prompt(use_case: dict) -> str:
+    """Build a JSON template string from a use case definition for the LLM prompt."""
+    lines = ['{']
+    for f in use_case['fields']:
+        type_hint = f['type']
+        lines.append(f'  "{f["name"]}": <{type_hint} — {f["description"]}>,') 
+    if use_case.get('source_quotes'):
+        lines.append('  // For EACH field above, also include:')
+        lines.append('  "<field_name>_source_quote": "<exact substring from the source text proving this value>"')
+    lines.append('}')
+    return '\n'.join(lines)
+
+
+def call_gemini(raw_text: str, attempt_number: int, previous_error: str | None, schema_description: str = None) -> str:
     """
     Call Gemini to extract structured JSON from messy text.
 
@@ -114,17 +114,24 @@ def call_gemini(raw_text: str, attempt_number: int, previous_error: str | None) 
         attempt_number:  Which attempt this is (1 = first try, 2 = first retry, etc.)
         previous_error:  The validation error from the Evidence Gate on the last
                          attempt, or None if this is the first attempt.
-
-    Returns:
-        A JSON string that (hopefully) matches the schema contract:
-        {"customer_name": str, "invoice_amount": float, "date": "YYYY-MM-DD"}
+        schema_description: The formatted string showing the target JSON structure.
     """
+    
+    default_schema = '''{
+  "customer_name": "<string>",
+  "invoice_amount": <float>,
+  "currency": "<string>",
+  "date": "<YYYY-MM-DD>",
+  "is_paid": <boolean>,
+  "line_items": ["<string>"]
+}'''
+    schema_json = schema_description if schema_description else default_schema
 
     # Build the prompt depending on whether this is a first attempt or a retry
     if attempt_number == 1 or previous_error is None:
-        user_prompt = EXTRACTION_PROMPT.format(raw_text=raw_text)
+        user_prompt = EXTRACTION_PROMPT.format(raw_text=raw_text, schema_json=schema_json)
     else:
-        user_prompt = RETRY_PROMPT.format(error=previous_error, raw_text=raw_text)
+        user_prompt = RETRY_PROMPT.format(error=previous_error, raw_text=raw_text, schema_json=schema_json)
 
     # Call Gemini
     response = _get_client().models.generate_content(
@@ -132,8 +139,7 @@ def call_gemini(raw_text: str, attempt_number: int, previous_error: str | None) 
         contents=user_prompt,
         config=genai.types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
-            temperature=0.1,           # low temp = more deterministic
-            max_output_tokens=512,     # JSON should be tiny
+            temperature=0.1,
         ),
     )
 

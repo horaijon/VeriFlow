@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET", "super-secret-hackathon-key")
 ALGORITHM = "HS256"
